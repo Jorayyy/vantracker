@@ -102,11 +102,23 @@ export async function DELETE(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const companyId = (session.user as any).companyId;
+  const { searchParams } = new URL(request.url);
+  const all = searchParams.get('all') === 'true';
+
+  if (all) {
+    const users = await sql`
+      SELECT u.id, u.full_name, u.role, u.is_active
+      FROM users u
+      WHERE u.company_id = ${companyId} AND u.is_active = true
+      ORDER BY u.full_name
+    `;
+    return NextResponse.json(users);
+  }
 
   const drivers = await sql`
     SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.created_at,

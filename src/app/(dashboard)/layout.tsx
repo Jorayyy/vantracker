@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import DriverSidebar from '@/components/DriverSidebar';
+import ChatWidget from '@/components/ChatWidget';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,7 @@ export default async function DashboardLayout({
         <main className="flex-1 overflow-hidden">
           {children}
         </main>
+        <ChatWidget />
       </div>
     );
   }
@@ -46,6 +48,7 @@ export default async function DashboardLayout({
       <main className="flex-1 overflow-hidden">
         {children}
       </main>
+      <ChatWidget />
     </div>
   );
 }
