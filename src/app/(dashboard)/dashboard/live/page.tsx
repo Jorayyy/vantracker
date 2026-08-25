@@ -17,6 +17,10 @@ interface Vehicle {
   driver_name: string | null;
   status: 'online' | 'idle' | 'offline';
   driver_status?: string;
+  route_id?: string;
+  route_name?: string;
+  route_color?: string;
+  route_waypoints?: { lat: number; lng: number; name: string }[];
 }
 
 interface Route {
@@ -146,6 +150,92 @@ export default function LiveTrackingPage() {
     });
   }, [routes]);
 
+  // Show selected vehicle's route on map
+  useEffect(() => {
+    if (!map.current || !map.current.isStyleLoaded()) return;
+    const mapInstance = map.current;
+    const sourceId = 'selected-route';
+    const lineId = 'selected-route-line';
+    const dotsId = 'selected-route-dots';
+    const highlightId = 'selected-route-highlight';
+
+    // Remove old selection layer
+    try {
+      if (mapInstance.getLayer(highlightId)) mapInstance.removeLayer(highlightId);
+      if (mapInstance.getLayer(lineId)) mapInstance.removeLayer(lineId);
+      if (mapInstance.getLayer(dotsId)) mapInstance.removeLayer(dotsId);
+      if (mapInstance.getSource(sourceId)) mapInstance.removeSource(sourceId);
+      const dotsSrc = 'selected-route-dots-src';
+      if (mapInstance.getSource(dotsSrc)) mapInstance.removeSource(dotsSrc);
+    } catch {}
+
+    if (!selectedVehicle || !selectedVehicle.route_id || !selectedVehicle.route_waypoints || selectedVehicle.route_waypoints.length < 2) return;
+
+    const wps = selectedVehicle.route_waypoints;
+    const vehicleCoords = [selectedVehicle.longitude, selectedVehicle.latitude];
+    const allCoords = [vehicleCoords, ...wps.map((wp) => [wp.lng, wp.lat] as [number, number])];
+
+    mapInstance.addSource(sourceId, {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: allCoords },
+      },
+    });
+
+    mapInstance.addLayer({
+      id: highlightId,
+      type: 'line',
+      source: sourceId,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': selectedVehicle.route_color || '#3b82f6',
+        'line-width': 5,
+        'line-opacity': 0.3,
+      },
+    });
+
+    mapInstance.addLayer({
+      id: lineId,
+      type: 'line',
+      source: sourceId,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': selectedVehicle.route_color || '#3b82f6',
+        'line-width': 3,
+        'line-opacity': 0.9,
+      },
+    });
+
+    const dotsData: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: wps.map((wp, i) => ({
+        type: 'Feature',
+        properties: { name: wp.name || 'Stop ' + (i + 1) },
+        geometry: { type: 'Point', coordinates: [wp.lng, wp.lat] },
+      })),
+    };
+
+    mapInstance.addSource(dotsId + '-src', { type: 'geojson', data: dotsData });
+    mapInstance.addLayer({
+      id: dotsId,
+      type: 'circle',
+      source: dotsId + '-src',
+      paint: {
+        'circle-radius': 7,
+        'circle-color': selectedVehicle.route_color || '#3b82f6',
+        'circle-stroke-color': 'white',
+        'circle-stroke-width': 2,
+      },
+    });
+
+    // Fit map to show the full route
+    const bounds = new maplibregl.LngLatBounds();
+    allCoords.forEach((c) => bounds.extend(c as [number, number]));
+    mapInstance.fitBounds(bounds, { padding: 60, maxZoom: 14 });
+  }, [selectedVehicle]);
+
   useEffect(() => {
     const eventSource = new EventSource('/api/stream');
 
@@ -186,6 +276,10 @@ export default function LiveTrackingPage() {
             vehicle.driver_status === 'repair' ? 'Repair' :
             vehicle.status === 'online' ? 'Online' : 'Offline';
 
+          const routeLabel = vehicle.route_name
+            ? '<p style="font-size:11px;color:' + (vehicle.route_color || '#3b82f6') + ';font-weight:600;margin-top:2px;">Route: ' + vehicle.route_name + '</p>'
+            : '';
+
           const marker = new maplibregl.Marker({ element: el })
             .setLngLat([vehicle.longitude, vehicle.latitude])
             .setPopup(
@@ -195,6 +289,7 @@ export default function LiveTrackingPage() {
                   '<p style="font-size:12px;color:#64748b;">' + (vehicle.name || '') + '</p>' +
                   '<p style="font-size:12px;color:#64748b;">' + (vehicle.driver_name || 'No driver') + '</p>' +
                   '<p style="font-size:11px;color:' + statusColor + ';font-weight:600;margin-top:4px;">' + statusLabel + '</p>' +
+                  routeLabel +
                   '<p style="font-size:12px;color:#64748b;">Speed: ' + (vehicle.speed ? Math.round(vehicle.speed) : 0) + ' km/h</p>' +
                 '</div>'
               )
@@ -285,7 +380,10 @@ export default function LiveTrackingPage() {
                 <div className="flex items-center gap-3">
                   <span className={
                     'w-2.5 h-2.5 rounded-full shrink-0 ' +
-                    (vehicle.status === 'online' ? 'bg-emerald-500' :
+                    (vehicle.driver_status === 'repair' ? 'bg-red-500' :
+                     vehicle.driver_status === 'on_break' ? 'bg-blue-500' :
+                     vehicle.driver_status === 'idle' ? 'bg-amber-500' :
+                     vehicle.status === 'online' ? 'bg-emerald-500' :
                      vehicle.status === 'idle' ? 'bg-amber-500' : 'bg-slate-400')
                   }></span>
                   <div className="flex-1 min-w-0">
@@ -293,6 +391,11 @@ export default function LiveTrackingPage() {
                     <p className="text-[11px] text-slate-500 truncate">
                       {vehicle.driver_name || 'No driver'}
                     </p>
+                    {vehicle.route_name && (
+                      <p className="text-[10px] font-medium truncate" style={{ color: vehicle.route_color || '#3b82f6' }}>
+                        {vehicle.route_name}
+                      </p>
+                    )}
                   </div>
                   <span className="text-[11px] text-slate-400 font-medium shrink-0">
                     {vehicle.speed ? Math.round(vehicle.speed) + ' km/h' : '-'}

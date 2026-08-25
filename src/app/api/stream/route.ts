@@ -16,10 +16,10 @@ export async function GET(request: Request) {
       // Send initial data immediately
       sendPositions(controller, encoder, companyId);
 
-      // Poll every 3 seconds
+      // Poll every 1 second
       const interval = setInterval(() => {
         sendPositions(controller, encoder, companyId);
-      }, 3000);
+      }, 1000);
 
       // Cleanup on disconnect
       request.signal.addEventListener('abort', () => {
@@ -56,6 +56,10 @@ async function sendPositions(
         l.recorded_at,
         l.driver_status,
         u.full_name as driver_name,
+        r.id as route_id,
+        r.name as route_name,
+        r.color as route_color,
+        r.waypoints as route_waypoints,
         CASE
           WHEN l.recorded_at > now() - INTERVAL '2 minutes' THEN 'online'
           WHEN l.recorded_at > now() - INTERVAL '10 minutes' THEN 'idle'
@@ -69,6 +73,8 @@ async function sendPositions(
       ) l ON true
       LEFT JOIN driver_assignments da ON da.vehicle_id = v.id AND da.is_active = true
       LEFT JOIN users u ON u.id = da.driver_id
+      LEFT JOIN route_assignments ra ON ra.vehicle_id = v.id
+      LEFT JOIN routes r ON r.id = ra.route_id AND r.is_active = true
       WHERE v.company_id = ${companyId} AND v.is_active = true
     `;
 
