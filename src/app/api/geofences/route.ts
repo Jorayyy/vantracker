@@ -2,6 +2,17 @@ import { auth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export async function GET() {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,6 +37,30 @@ export async function POST(request: Request) {
     VALUES (${companyId}, ${name}, ${type || 'circle'}, ${center_lat || null}, ${center_lng || null}, ${radius_meters || null}, ${polygon ? JSON.stringify(polygon) : null}::jsonb)
     RETURNING *
   `;
+
+  if (center_lat && center_lng && radius_meters) {
+    const activeVehicles = await sql`
+      SELECT v.id as vehicle_id, v.plate_number, vl.latitude, vl.longitude, vl.driver_id, u.full_name as driver_name
+      FROM vehicles v
+      JOIN LATERAL (
+        SELECT * FROM vehicle_locations WHERE vehicle_id = v.id ORDER BY recorded_at DESC LIMIT 1
+      ) vl ON true
+      LEFT JOIN users u ON u.id = vl.driver_id
+      WHERE v.company_id = ${companyId} AND v.is_active = true
+        AND vl.recorded_at > now() - INTERVAL '5 minutes'
+    `;
+    for (const v of activeVehicles) {
+      if (v.latitude == null || v.longitude == null) continue;
+      const dist = haversine(v.latitude, v.longitude, center_lat, center_lng);
+      if (dist <= radius_meters / 1000) {
+        await sql`
+          INSERT INTO geofence_alerts (company_id, geofence_id, vehicle_id, driver_id, event_type, geofence_name, vehicle_plate, driver_name, latitude, longitude)
+          VALUES (${companyId}, ${result[0].id}, ${v.vehicle_id}, ${v.driver_id || null}, 'entered', ${name}, ${v.plate_number}, ${v.driver_name || null}, ${v.latitude}, ${v.longitude})
+        `;
+      }
+    }
+  }
+
   return NextResponse.json(result[0], { status: 201 });
 }
 
