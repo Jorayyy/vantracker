@@ -60,7 +60,7 @@ function getStatusLabel(v: Vehicle): string {
 
 function getMarkerHTML(color: string): string {
   return (
-    '<div style="width:36px;height:36px;background:' + color +
+    '<div data-van-badge style="width:36px;height:36px;background:' + color +
     ';border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">' +
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
     '<rect x="1" y="3" width="15" height="13" rx="2"/>' +
@@ -320,9 +320,8 @@ export default function LiveTrackingPage() {
 
           if (existingMarker) {
             existingMarker.setLngLat([vehicle.longitude, vehicle.latitude]);
-            const el = existingMarker.getElement();
-            const inner = el.querySelector('div');
-            if (inner) inner.style.background = color;
+            const badge = existingMarker.getElement().querySelector('[data-van-badge]') as HTMLElement | null;
+            if (badge) badge.style.background = color;
             const popup = existingMarker.getPopup();
             if (popup) popup.setHTML(getPopupHTML(vehicle, color));
           } else {
