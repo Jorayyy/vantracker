@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
-import { Truck, Users, MapPin, ArrowRight, BarChart3, Clock, Zap } from 'lucide-react';
+import { Truck, Users, MapPin, ArrowRight, BarChart3, Clock, Zap, Shield, LogIn, LogOut } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -13,10 +13,11 @@ export default async function DashboardPage() {
 
   const companyId = (session.user as any).companyId;
 
-  const [vehicleCount, driverCount, locationCount] = await Promise.all([
+  const [vehicleCount, driverCount, locationCount, alerts] = await Promise.all([
     sql`SELECT COUNT(*)::int as count FROM vehicles WHERE company_id = ${companyId}`,
     sql`SELECT COUNT(*)::int as count FROM users WHERE company_id = ${companyId} AND role = 'driver'`,
     sql`SELECT COUNT(*)::int as count FROM vehicle_locations vl JOIN vehicles v ON v.id = vl.vehicle_id WHERE v.company_id = ${companyId} AND vl.created_at > now() - INTERVAL '24 hours'`,
+    sql`SELECT * FROM geofence_alerts WHERE company_id = ${companyId} ORDER BY created_at DESC LIMIT 10`,
   ]);
 
   const stats = [
@@ -127,6 +128,55 @@ export default async function DashboardPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Geofence Alerts */}
+      <div className="mt-8 bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center">
+              <Shield className="w-5 h-5 text-violet-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Geofence Alerts</h2>
+              <p className="text-xs text-slate-500">Recent zone entry/exit events</p>
+            </div>
+          </div>
+          <Link href="/dashboard/geofences" className="text-xs font-medium text-blue-600 hover:text-blue-700">Manage Zones</Link>
+        </div>
+        {alerts.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-8">No geofence alerts yet. Create zones and start tracking to see events.</p>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-auto">
+            {alerts.map((alert: any) => (
+              <div key={alert.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  alert.event_type === 'entered' ? 'bg-emerald-100' : 'bg-amber-100'
+                }`}>
+                  {alert.event_type === 'entered'
+                    ? <LogIn className="w-4 h-4 text-emerald-600" />
+                    : <LogOut className="w-4 h-4 text-amber-600" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">
+                    <span className="font-semibold">{alert.vehicle_plate}</span>
+                    {' '}
+                    <span className={alert.event_type === 'entered' ? 'text-emerald-600' : 'text-amber-600'}>
+                      {alert.event_type === 'entered' ? 'entered' : 'exited'}
+                    </span>
+                    {' '}
+                    {alert.geofence_name}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {alert.driver_name ? alert.driver_name + ' · ' : ''}
+                    {new Date(alert.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

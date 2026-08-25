@@ -106,6 +106,44 @@ export async function POST(request: Request) {
         AND started_at < ${fiveMinAgo}
     `;
 
+    const [vehicle] = await sql`SELECT company_id FROM vehicles WHERE id = ${vehicle_id}`;
+    if (vehicle) {
+      const geofences = await sql`
+        SELECT id, name, center_lat, center_lng, radius_meters
+        FROM geofences WHERE company_id = ${vehicle.company_id} AND is_active = true
+      `;
+      const [vehicleInfo] = await sql`SELECT plate_number FROM vehicles WHERE id = ${vehicle_id}`;
+      const [driverInfo] = driver_id
+        ? await sql`SELECT full_name FROM users WHERE id = ${driver_id}`
+        : [null];
+
+      for (const gf of geofences) {
+        if (gf.center_lat == null || gf.center_lng == null || gf.radius_meters == null) continue;
+        const dist = haversine(lat, lng, gf.center_lat, gf.center_lng);
+        const isInside = dist <= gf.radius_meters / 1000;
+
+        const [lastAlert] = await sql`
+          SELECT event_type FROM geofence_alerts
+          WHERE geofence_id = ${gf.id} AND vehicle_id = ${vehicle_id}
+          ORDER BY created_at DESC LIMIT 1
+        `;
+
+        const wasInside = lastAlert?.event_type === 'entered';
+
+        if (isInside && !wasInside) {
+          await sql`
+            INSERT INTO geofence_alerts (company_id, geofence_id, vehicle_id, driver_id, event_type, geofence_name, vehicle_plate, driver_name, latitude, longitude)
+            VALUES (${vehicle.company_id}, ${gf.id}, ${vehicle_id}, ${driver_id || null}, 'entered', ${gf.name}, ${vehicleInfo?.plate_number || ''}, ${driverInfo?.full_name || null}, ${lat}, ${lng})
+          `;
+        } else if (!isInside && wasInside) {
+          await sql`
+            INSERT INTO geofence_alerts (company_id, geofence_id, vehicle_id, driver_id, event_type, geofence_name, vehicle_plate, driver_name, latitude, longitude)
+            VALUES (${vehicle.company_id}, ${gf.id}, ${vehicle_id}, ${driver_id || null}, 'exited', ${gf.name}, ${vehicleInfo?.plate_number || ''}, ${driverInfo?.full_name || null}, ${lat}, ${lng})
+          `;
+        }
+      }
+    }
+
     return NextResponse.json({ success: true, id: result[0].id });
   } catch (error) {
     console.error('Location insert error:', error);

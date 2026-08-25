@@ -165,6 +165,7 @@ export default function LiveTrackingPage() {
   const vehiclesRef = useRef<Vehicle[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
+  const [geofences, setGeofences] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
@@ -227,6 +228,10 @@ export default function LiveTrackingPage() {
       .then((res) => res.json())
       .then((data) => setRoutes(data))
       .catch(() => {});
+    fetch('/api/geofences')
+      .then((res) => res.json())
+      .then((data) => setGeofences(data))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -279,6 +284,71 @@ export default function LiveTrackingPage() {
       routeLayers.current.set(route.id, true);
     });
   }, [routes]);
+
+  useEffect(() => {
+    if (!map.current || !map.current.isStyleLoaded()) return;
+    const mapInstance = map.current;
+
+    geofences.forEach((gf) => {
+      const sourceId = 'geofence-' + gf.id;
+      const fillId = 'geofence-fill-' + gf.id;
+      const borderId = 'geofence-border-' + gf.id;
+      const labelId = 'geofence-label-' + gf.id;
+
+      if (mapInstance.getLayer(labelId)) mapInstance.removeLayer(labelId);
+      if (mapInstance.getLayer(borderId)) mapInstance.removeLayer(borderId);
+      if (mapInstance.getLayer(fillId)) mapInstance.removeLayer(fillId);
+      if (mapInstance.getSource(sourceId)) mapInstance.removeSource(sourceId);
+
+      if (gf.center_lat == null || gf.center_lng == null || gf.radius_meters == null) return;
+
+      const radiusKm = gf.radius_meters / 1000;
+      const sides = 64;
+      const coords: [number, number][] = [];
+      for (let i = 0; i < sides; i++) {
+        const angle = (i / sides) * 2 * Math.PI;
+        const dLat = (radiusKm / 111.32) * Math.cos(angle);
+        const dLng = (radiusKm / (111.32 * Math.cos((gf.center_lat * Math.PI) / 180))) * Math.sin(angle);
+        coords.push([gf.center_lng + dLng, gf.center_lat + dLat]);
+      }
+      coords.push(coords[0]);
+
+      mapInstance.addSource(sourceId, {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: { name: gf.name },
+          geometry: { type: 'Polygon', coordinates: [coords] },
+        },
+      });
+
+      mapInstance.addLayer({
+        id: fillId,
+        type: 'fill',
+        source: sourceId,
+        paint: { 'fill-color': '#8b5cf6', 'fill-opacity': 0.1 },
+      });
+
+      mapInstance.addLayer({
+        id: borderId,
+        type: 'line',
+        source: sourceId,
+        paint: { 'line-color': '#8b5cf6', 'line-width': 2, 'line-opacity': 0.6 },
+      });
+
+      mapInstance.addLayer({
+        id: labelId,
+        type: 'symbol',
+        source: sourceId,
+        layout: {
+          'text-field': gf.name,
+          'text-size': 11,
+          'text-anchor': 'center',
+        },
+        paint: { 'text-color': '#7c3aed', 'text-opacity': 0.8 },
+      });
+    });
+  }, [geofences]);
 
   useEffect(() => {
     if (!map.current || !map.current.isStyleLoaded()) return;
