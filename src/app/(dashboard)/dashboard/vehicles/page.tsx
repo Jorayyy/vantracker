@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import VehicleForm from '@/components/VehicleForm';
-import { Truck, Search } from 'lucide-react';
+import { Truck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 

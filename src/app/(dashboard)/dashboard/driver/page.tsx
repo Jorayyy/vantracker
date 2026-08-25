@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { Truck, Play, Square, Signal, SignalOff, MapPin, Clock, Loader2 } from 'lucide-react';
+import { Truck, Play, Square, Signal, WifiOff, MapPin, Clock, Loader2 } from 'lucide-react';
 
 interface Vehicle {
   id: string;
@@ -139,7 +139,7 @@ export default function DriverPage() {
             {isTracking ? (
               <Signal className="w-10 h-10 text-emerald-400 animate-pulse" />
             ) : (
-              <SignalOff className="w-10 h-10 text-slate-500" />
+              <WifiOff className="w-10 h-10 text-slate-500" />
             )}
           </div>
           <p className="text-lg font-bold">
