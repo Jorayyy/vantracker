@@ -18,6 +18,8 @@ export default async function RoutesPage() {
     sql`SELECT id, plate_number FROM vehicles WHERE company_id = ${companyId} AND is_active = true ORDER BY plate_number`,
   ]);
 
+  const vehiclesList = vehicles as { id: string; plate_number: string }[];
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto h-full overflow-auto">
       <div className="mb-6">
@@ -25,7 +27,7 @@ export default async function RoutesPage() {
         <p className="text-sm text-slate-500 mt-1">Define fixed routes for your fleet</p>
       </div>
 
-      <RoutesManager routes={routes} vehicles={vehicles} companyId={companyId} />
+      <RoutesManager routes={routes} vehicles={vehiclesList} companyId={companyId} />
     </div>
   );
 }
