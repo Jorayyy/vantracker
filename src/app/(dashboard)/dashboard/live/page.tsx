@@ -107,9 +107,9 @@ export default function LiveTrackingPage() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Header */}
-      <div className="px-6 py-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+      <div className="px-6 py-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-20">
         <div>
           <h1 className="text-lg font-bold text-slate-900">Live Tracking</h1>
         </div>
@@ -129,7 +129,7 @@ export default function LiveTrackingPage() {
         </div>
       </div>
 
-      <div className="flex-1 relative">
+      <div className="flex-1 relative" style={{ minHeight: 0 }}>
         <div ref={mapContainer} className="absolute inset-0" />
 
         {/* Vehicle sidebar */}

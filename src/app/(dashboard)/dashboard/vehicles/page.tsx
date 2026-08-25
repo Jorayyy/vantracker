@@ -31,7 +31,7 @@ export default async function VehiclesPage() {
   ]);
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Vehicles</h1>
