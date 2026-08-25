@@ -1,4 +1,9 @@
-'use client';
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, '..', 'src', 'app', '(dashboard)', 'dashboard', 'live', 'page.tsx');
+
+const content = `'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
@@ -199,26 +204,26 @@ export default function LiveTrackingPage() {
                     zoom: 15,
                   });
                 }}
-                className={`px-4 py-3 cursor-pointer border-b border-slate-50 hover:bg-slate-50 transition-colors ${
+                className={\`px-4 py-3 cursor-pointer border-b border-slate-50 hover:bg-slate-50 transition-colors \${
                   selectedVehicle?.id === vehicle.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
-                }`}
+                }\`}
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    className={\`w-2.5 h-2.5 rounded-full shrink-0 \${
                       vehicle.status === 'online'
                         ? 'bg-emerald-500'
                         : vehicle.status === 'idle'
                           ? 'bg-amber-500'
                           : 'bg-slate-400'
-                    }`}
+                    }\`}
                   ></span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-900 truncate">{vehicle.plate_number}</p>
                     <p className="text-[11px] text-slate-500 truncate">{vehicle.driver_name || 'No driver'}</p>
                   </div>
                   <span className="text-[11px] text-slate-400 font-medium shrink-0">
-                    {vehicle.speed ? `${Math.round(vehicle.speed)} km/h` : '-'}
+                    {vehicle.speed ? \`\${Math.round(vehicle.speed)} km/h\` : '-'}
                   </span>
                 </div>
               </div>
@@ -235,3 +240,7 @@ export default function LiveTrackingPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync(filePath, content, 'utf8');
+console.log('File written successfully');
