@@ -237,9 +237,15 @@ export default function LiveTrackingPage() {
   }, [selectedVehicle]);
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/stream');
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
 
-    eventSource.onmessage = (event) => {
+    const connect = () => {
+      eventSource = new EventSource('/api/stream');
+
+      eventSource.onopen = () => {};
+
+      eventSource.onmessage = (event) => {
       const data: Vehicle[] = JSON.parse(event.data);
       setVehicles(data);
 
@@ -305,7 +311,18 @@ export default function LiveTrackingPage() {
       });
     };
 
-    return () => eventSource.close();
+      eventSource.onerror = () => {
+        eventSource?.close();
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      eventSource?.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
   }, []);
 
   const statusCounts = {
