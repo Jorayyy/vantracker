@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import VehicleForm from '@/components/VehicleForm';
+import AssignDriverForm from '@/components/AssignDriverForm';
 import { Truck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -12,14 +13,21 @@ export default async function VehiclesPage() {
 
   const companyId = (session.user as any).companyId;
 
-  const vehicles = await sql`
-    SELECT v.*, u.full_name as driver_name
-    FROM vehicles v
-    LEFT JOIN driver_assignments da ON da.vehicle_id = v.id AND da.is_active = true
-    LEFT JOIN users u ON u.id = da.driver_id
-    WHERE v.company_id = ${companyId}
-    ORDER BY v.plate_number
-  `;
+  const [vehicles, drivers] = await Promise.all([
+    sql`
+      SELECT v.*, u.full_name as driver_name, u.id as driver_id
+      FROM vehicles v
+      LEFT JOIN driver_assignments da ON da.vehicle_id = v.id AND da.is_active = true
+      LEFT JOIN users u ON u.id = da.driver_id
+      WHERE v.company_id = ${companyId}
+      ORDER BY v.plate_number
+    `,
+    sql`
+      SELECT id, full_name FROM users
+      WHERE company_id = ${companyId} AND role = 'driver' AND is_active = true
+      ORDER BY full_name
+    `,
+  ]);
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -55,7 +63,16 @@ export default async function VehiclesPage() {
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">{vehicle.name || '-'}</td>
                 <td className="px-6 py-4 text-sm text-slate-600">{vehicle.model || '-'}</td>
-                <td className="px-6 py-4 text-sm text-slate-600">{vehicle.driver_name || 'Unassigned'}</td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-600">{vehicle.driver_name || 'Unassigned'}</span>
+                    <AssignDriverForm
+                      vehicleId={vehicle.id}
+                      currentDriverId={vehicle.driver_id}
+                      drivers={drivers as any}
+                    />
+                  </div>
+                </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     vehicle.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
