@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
-import { History, Route, Clock, Gauge } from 'lucide-react';
+import { Route, Clock, MapPin } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +22,17 @@ export default async function HistoryPage() {
     LIMIT 50
   `;
 
+  const formatDuration = (started: string, ended: string | null) => {
+    if (!started) return '-';
+    const end = ended ? new Date(ended) : new Date();
+    const ms = end.getTime() - new Date(started).getTime();
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return `${hrs}h ${rem}m`;
+  };
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto h-full overflow-auto">
       <div className="mb-6">
@@ -35,24 +46,38 @@ export default async function HistoryPage() {
             <tr>
               <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Vehicle</th>
               <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Driver</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Route</th>
               <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Started</th>
               <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Duration</th>
               <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Distance</th>
               <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg Speed</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {trips.map((trip: any) => (
               <tr key={trip.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 font-semibold text-sm text-slate-900">{trip.plate_number}</td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <Route className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="font-semibold text-sm text-slate-900">{trip.plate_number}</span>
+                  </div>
+                </td>
                 <td className="px-6 py-4 text-sm text-slate-600">{trip.driver_name || '-'}</td>
+                <td className="px-6 py-4 text-sm">
+                  {trip.route_name ? (
+                    <span className="text-blue-600 font-medium">{trip.route_name}</span>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
                   {trip.started_at ? new Date(trip.started_at).toLocaleString() : '-'}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
-                  {trip.started_at && trip.ended_at
-                    ? `${Math.round((new Date(trip.ended_at).getTime() - new Date(trip.started_at).getTime()) / 60000)} min`
-                    : '-'}
+                  {formatDuration(trip.started_at, trip.ended_at)}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600">
                   {trip.distance_km ? `${trip.distance_km.toFixed(1)} km` : '-'}
@@ -60,11 +85,23 @@ export default async function HistoryPage() {
                 <td className="px-6 py-4 text-sm text-slate-600">
                   {trip.avg_speed ? `${Math.round(trip.avg_speed)} km/h` : '-'}
                 </td>
+                <td className="px-6 py-4">
+                  {trip.ended_at ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                      Completed
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                      Ongoing
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
             {trips.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-16 text-center">
+                <td colSpan={8} className="px-6 py-16 text-center">
                   <Route className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                   <p className="text-sm font-medium text-slate-500">No trip history yet</p>
                   <p className="text-xs text-slate-400 mt-1">Trips will appear here once drivers start tracking</p>

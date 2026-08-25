@@ -2,7 +2,17 @@ import { auth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 
-// POST: Receive GPS location from driver's phone
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export async function POST(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,10 +31,79 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid coordinates' }, { status: 400 });
     }
 
+    const ts = recorded_at || new Date().toISOString();
+    const status = driver_status || 'online';
+
     const result = await sql`
       INSERT INTO vehicle_locations (vehicle_id, driver_id, latitude, longitude, speed, heading, accuracy, recorded_at, driver_status)
-      VALUES (${vehicle_id}, ${driver_id || null}, ${lat}, ${lng}, ${speed || null}, ${heading || null}, ${accuracy || null}, ${recorded_at || new Date().toISOString()}, ${driver_status || 'online'})
+      VALUES (${vehicle_id}, ${driver_id || null}, ${lat}, ${lng}, ${speed || null}, ${heading || null}, ${accuracy || null}, ${ts}, ${status})
       RETURNING id, recorded_at
+    `;
+
+    const isActive = status === 'online' || status === 'idle';
+
+    if (isActive) {
+      const [activeTrip] = await sql`
+        SELECT id FROM trip_summaries
+        WHERE vehicle_id = ${vehicle_id} AND ended_at IS NULL
+        ORDER BY started_at DESC LIMIT 1
+      `;
+
+      if (!activeTrip) {
+        const [assignedRoute] = await sql`
+          SELECT r.id as route_id, r.name as route_name
+          FROM route_assignments ra
+          JOIN routes r ON r.id = ra.route_id AND r.is_active = true
+          WHERE ra.vehicle_id = ${vehicle_id}
+          LIMIT 1
+        `;
+        await sql`
+          INSERT INTO trip_summaries (vehicle_id, driver_id, started_at, start_lat, start_lng, route_id, route_name)
+          VALUES (${vehicle_id}, ${driver_id || null}, ${ts}, ${lat}, ${lng}, ${assignedRoute?.route_id || null}, ${assignedRoute?.route_name || null})
+        `;
+      }
+    } else {
+      const [activeTrip] = await sql`
+        SELECT id, started_at, start_lat, start_lng FROM trip_summaries
+        WHERE vehicle_id = ${vehicle_id} AND ended_at IS NULL
+        ORDER BY started_at DESC LIMIT 1
+      `;
+
+      if (activeTrip) {
+        const [lastLoc] = await sql`
+          SELECT latitude, longitude, speed FROM vehicle_locations
+          WHERE vehicle_id = ${vehicle_id} AND recorded_at > ${activeTrip.started_at}
+          ORDER BY recorded_at DESC LIMIT 1 OFFSET 1
+        `;
+        const totalDistance = lastLoc ? haversine(activeTrip.start_lat, activeTrip.start_lng, lat, lng) : 0;
+
+        const [speedStats] = await sql`
+          SELECT AVG(speed) as avg_speed, MAX(speed) as max_speed
+          FROM vehicle_locations
+          WHERE vehicle_id = ${vehicle_id}
+            AND recorded_at >= ${activeTrip.started_at}
+            AND recorded_at <= ${ts}
+            AND speed IS NOT NULL AND speed > 0
+        `;
+
+        await sql`
+          UPDATE trip_summaries
+          SET ended_at = ${ts}, end_lat = ${lat}, end_lng = ${lng},
+              distance_km = ${totalDistance},
+              avg_speed = ${speedStats?.avg_speed || null},
+              max_speed = ${speedStats?.max_speed || null}
+          WHERE id = ${activeTrip.id}
+        `;
+      }
+    }
+
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    await sql`
+      UPDATE trip_summaries
+      SET ended_at = ${ts}, end_lat = ${lat}, end_lng = ${lng}
+      WHERE ended_at IS NULL
+        AND vehicle_id = ${vehicle_id}
+        AND started_at < ${fiveMinAgo}
     `;
 
     return NextResponse.json({ success: true, id: result[0].id });
@@ -34,7 +113,6 @@ export async function POST(request: Request) {
   }
 }
 
-// GET: Get location history for a vehicle
 export async function GET(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
