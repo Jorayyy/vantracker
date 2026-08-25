@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import VehicleForm from '@/components/VehicleForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function VehiclesPage() {
   const session = await auth();
   if (!session) redirect('/login');

@@ -2,6 +2,8 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'VanTracker - Fleet Management',
   description: 'Real-time van tracking system',

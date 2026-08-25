@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
 import DriverForm from '@/components/DriverForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DriversPage() {
   const session = await auth();
   if (!session) redirect('/login');
