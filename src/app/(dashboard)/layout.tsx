@@ -12,7 +12,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  let session;
+  try {
+    session = await auth();
+  } catch (error) {
+    console.error('Session error:', error);
+    redirect('/login');
+  }
 
   if (!session) {
     redirect('/login');
