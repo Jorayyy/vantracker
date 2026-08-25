@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import sql from './db';
 
@@ -10,7 +10,7 @@ export const {
   auth,
 } = NextAuth({
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -19,28 +19,33 @@ export const {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const result = await sql`
-          SELECT id, email, password_hash, full_name, role, company_id, is_active
-          FROM users
-          WHERE email = ${credentials.email as string}
-        `;
+        try {
+          const result = await sql`
+            SELECT id, email, password_hash, full_name, role, company_id, is_active
+            FROM users
+            WHERE email = ${credentials.email as string}
+          `;
 
-        const user = result[0];
-        if (!user || !user.is_active) return null;
+          const user = result[0];
+          if (!user || !user.is_active) return null;
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password_hash
-        );
-        if (!isValid) return null;
+          const isValid = await bcrypt.compare(
+            credentials.password as string,
+            user.password_hash
+          );
+          if (!isValid) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.full_name,
-          role: user.role,
-          companyId: user.company_id,
-        };
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.full_name,
+            role: user.role,
+            companyId: user.company_id,
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
+        }
       },
     }),
   ],
@@ -63,9 +68,6 @@ export const {
   },
   pages: {
     signIn: '/login',
-  },
-  session: {
-    strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET,
 });
