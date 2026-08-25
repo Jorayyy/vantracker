@@ -214,8 +214,10 @@ export default function LiveTrackingPage() {
   }, []);
 
   const statusCounts = {
-    online: vehicles.filter((v) => v.status === 'online').length,
-    idle: vehicles.filter((v) => v.status === 'idle').length,
+    driving: vehicles.filter((v) => v.driver_status === 'online' || (!v.driver_status && v.status === 'online')).length,
+    idle: vehicles.filter((v) => v.driver_status === 'idle' || v.status === 'idle').length,
+    on_break: vehicles.filter((v) => v.driver_status === 'on_break').length,
+    repair: vehicles.filter((v) => v.driver_status === 'repair').length,
     offline: vehicles.filter((v) => v.status === 'offline').length,
   };
 
@@ -223,14 +225,22 @@ export default function LiveTrackingPage() {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="px-6 py-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
         <h1 className="text-lg font-bold text-slate-900">Live Tracking</h1>
-        <div className="flex items-center gap-5 text-xs font-medium">
+        <div className="flex items-center gap-4 text-xs font-medium">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-            Online ({statusCounts.online})
+            Driving ({statusCounts.driving})
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
             Idle ({statusCounts.idle})
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+            Break ({statusCounts.on_break})
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+            Repair ({statusCounts.repair})
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 bg-slate-400 rounded-full"></span>

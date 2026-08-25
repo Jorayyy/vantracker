@@ -1,4 +1,9 @@
-'use client';
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, '..', 'src', 'components', 'RouteForm.tsx');
+
+const content = `'use client';
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -168,11 +173,11 @@ export default function RouteForm({ companyId, vehicles, route, onClose }: {
                   onClick={() => setSelectedVehicles(prev =>
                     prev.includes(v.id) ? prev.filter(id => id !== v.id) : [...prev, v.id]
                   )}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  className={\`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors \${
                     selectedVehicles.includes(v.id)
                       ? 'bg-blue-50 border-blue-300 text-blue-700'
                       : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}>
+                  }\`}>
                   {v.plate_number}
                 </button>
               ))}
@@ -267,3 +272,7 @@ export default function RouteForm({ companyId, vehicles, route, onClose }: {
     </div>
   );
 }
+`;
+
+fs.writeFileSync(filePath, content, 'utf8');
+console.log('RouteForm updated');
