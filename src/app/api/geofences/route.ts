@@ -17,13 +17,13 @@ export async function POST(request: Request) {
 
   const companyId = (session.user as any).companyId;
   const body = await request.json();
-  const { name, type, coordinates, radius } = body;
+  const { name, type, center_lat, center_lng, radius_meters, polygon } = body;
 
-  if (!name || !type) return NextResponse.json({ error: 'Name and type required' }, { status: 400 });
+  if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
 
   const result = await sql`
-    INSERT INTO geofences (company_id, name, type, coordinates, radius)
-    VALUES (${companyId}, ${name}, ${type}, ${coordinates ? JSON.stringify(coordinates) : null}::jsonb, ${radius || null})
+    INSERT INTO geofences (company_id, name, type, center_lat, center_lng, radius_meters, polygon)
+    VALUES (${companyId}, ${name}, ${type || 'circle'}, ${center_lat || null}, ${center_lng || null}, ${radius_meters || null}, ${polygon ? JSON.stringify(polygon) : null}::jsonb)
     RETURNING *
   `;
   return NextResponse.json(result[0], { status: 201 });
@@ -36,7 +36,7 @@ export async function PUT(request: Request) {
 
   const companyId = (session.user as any).companyId;
   const body = await request.json();
-  const { id, name, type, coordinates, radius, is_active } = body;
+  const { id, name, type, center_lat, center_lng, radius_meters, polygon, is_active } = body;
 
   if (!id) return NextResponse.json({ error: 'Geofence ID required' }, { status: 400 });
 
@@ -44,8 +44,10 @@ export async function PUT(request: Request) {
     UPDATE geofences SET
       name = COALESCE(${name || null}, name),
       type = COALESCE(${type || null}, type),
-      coordinates = COALESCE(${coordinates ? JSON.stringify(coordinates) : null}::jsonb, coordinates),
-      radius = COALESCE(${radius}, radius),
+      center_lat = COALESCE(${center_lat}, center_lat),
+      center_lng = COALESCE(${center_lng}, center_lng),
+      radius_meters = COALESCE(${radius_meters}, radius_meters),
+      polygon = COALESCE(${polygon ? JSON.stringify(polygon) : null}::jsonb, polygon),
       is_active = COALESCE(${is_active}, is_active)
     WHERE id = ${id} AND company_id = ${companyId}
     RETURNING *

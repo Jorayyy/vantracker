@@ -9,43 +9,70 @@ export default function GeofencesManager({ geofences, companyId }: { geofences: 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', type: 'polygon', radius: '500', lat: '10.75', lng: '124.8' });
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({ name: '', type: 'circle', radius: '500', lat: '10.75', lng: '124.8' });
 
   const openEdit = (g: any) => {
     setEditing(g);
+    setError('');
     setForm({
       name: g.name || '',
-      type: g.type || 'polygon',
-      radius: g.radius?.toString() || '500',
-      lat: g.coordinates?.[0]?.lat?.toString() || '10.75',
-      lng: g.coordinates?.[0]?.lng?.toString() || '124.8',
+      type: g.type || 'circle',
+      radius: g.radius_meters?.toString() || '500',
+      lat: g.center_lat?.toString() || '10.75',
+      lng: g.center_lng?.toString() || '124.8',
     });
     setShowForm(true);
   };
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: '', type: 'polygon', radius: '500', lat: '10.75', lng: '124.8' });
+    setError('');
+    setForm({ name: '', type: 'circle', radius: '500', lat: '10.75', lng: '124.8' });
     setShowForm(true);
   };
 
   const handleSave = async () => {
     if (!form.name) return;
     setLoading(true);
-    const coordinates = [{ lat: parseFloat(form.lat), lng: parseFloat(form.lng) }];
+    setError('');
     const payload = editing
-      ? { id: editing.id, name: form.name, type: form.type, coordinates, radius: parseInt(form.radius) }
-      : { name: form.name, type: form.type, coordinates, radius: parseInt(form.radius) };
+      ? {
+          id: editing.id,
+          name: form.name,
+          type: form.type,
+          center_lat: parseFloat(form.lat),
+          center_lng: parseFloat(form.lng),
+          radius_meters: parseFloat(form.radius),
+        }
+      : {
+          name: form.name,
+          type: form.type,
+          center_lat: parseFloat(form.lat),
+          center_lng: parseFloat(form.lng),
+          radius_meters: parseFloat(form.radius),
+        };
 
-    await fetch('/api/geofences', {
-      method: editing ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    setLoading(false);
-    setShowForm(false);
-    setEditing(null);
-    router.refresh();
+    try {
+      const res = await fetch('/api/geofences', {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to save');
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+      setShowForm(false);
+      setEditing(null);
+      router.refresh();
+    } catch {
+      setError('Network error');
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -90,7 +117,8 @@ export default function GeofencesManager({ geofences, companyId }: { geofences: 
                   <button onClick={() => handleDelete(g.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-slate-50"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
-              {g.radius && <p className="text-xs text-slate-500">Radius: {g.radius}m</p>}
+              {g.radius_meters && <p className="text-xs text-slate-500">Radius: {g.radius_meters}m</p>}
+              {g.center_lat && g.center_lng && <p className="text-xs text-slate-400 mt-1">{g.center_lat.toFixed(4)}, {g.center_lng.toFixed(4)}</p>}
               <div className="mt-3 pt-3 border-t border-slate-100">
                 <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${g.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                   {g.is_active ? 'Active' : 'Inactive'}
@@ -109,6 +137,7 @@ export default function GeofencesManager({ geofences, companyId }: { geofences: 
               <button onClick={() => { setShowForm(false); setEditing(null); }} className="text-slate-400 hover:text-slate-600 p-1"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-5 space-y-4">
+              {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg">{error}</p>}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Name *</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -120,8 +149,8 @@ export default function GeofencesManager({ geofences, companyId }: { geofences: 
                   <label className="block text-xs font-medium text-slate-500 mb-1">Type</label>
                   <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="polygon">Polygon</option>
                     <option value="circle">Circle</option>
+                    <option value="polygon">Polygon</option>
                   </select>
                 </div>
                 <div>
