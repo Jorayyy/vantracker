@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { Truck, Play, Square, Signal, SignalOff, MapPin, Clock, Loader2 } from 'lucide-react';
 
 interface Vehicle {
   id: string;
@@ -18,7 +19,6 @@ export default function DriverPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
   const watchIdRef = useRef<number | null>(null);
 
-  // Fetch assigned vehicles
   useEffect(() => {
     fetch('/api/driver/vehicles')
       .then((res) => res.json())
@@ -85,7 +85,6 @@ export default function DriverPage() {
     setIsTracking(false);
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
@@ -95,31 +94,33 @@ export default function DriverPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">🚐 VanTracker</h1>
-          <p className="text-gray-400 mt-1">Driver Mode</p>
+    <div className="min-h-screen bg-slate-900 text-white">
+      <div className="max-w-md mx-auto p-6">
+        {/* Header */}
+        <div className="text-center mb-8 pt-4">
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Truck className="w-7 h-7 text-white" />
+          </div>
+          <h1 className="text-xl font-bold">VanTracker</h1>
+          <p className="text-slate-400 text-sm mt-1">Driver Mode</p>
         </div>
 
         {/* User info */}
-        <div className="bg-gray-800 rounded-xl p-4 mb-6">
-          <p className="text-sm text-gray-400">Logged in as</p>
-          <p className="font-medium">{session?.user?.name || 'Loading...'}</p>
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-5">
+          <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-1">Logged in as</p>
+          <p className="font-semibold text-sm">{session?.user?.name || 'Loading...'}</p>
         </div>
 
         {/* Vehicle selector */}
-        <div className="bg-gray-800 rounded-xl p-4 mb-6">
-          <label className="block text-sm text-gray-400 mb-2">Select Vehicle</label>
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-5">
+          <label className="block text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">Select Vehicle</label>
           <select
             value={selectedVehicle}
             onChange={(e) => setSelectedVehicle(e.target.value)}
-            className="w-full bg-gray-700 rounded-lg px-4 py-3 text-white"
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isTracking}
           >
-            {vehicles.length === 0 && (
-              <option value="">No vehicles assigned</option>
-            )}
+            {vehicles.length === 0 && <option value="">No vehicles assigned</option>}
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.plate_number} {v.name ? `- ${v.name}` : ''}
@@ -128,43 +129,62 @@ export default function DriverPage() {
           </select>
         </div>
 
-        {/* Status */}
-        <div className="bg-gray-800 rounded-xl p-6 mb-6 text-center">
-          <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${
-            isTracking ? 'bg-green-500 animate-pulse' : 'bg-gray-700'
+        {/* Status card */}
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 mb-5 text-center">
+          <div className={`w-24 h-24 rounded-full mx-auto mb-5 flex items-center justify-center transition-all duration-300 ${
+            isTracking
+              ? 'bg-emerald-500/20 border-2 border-emerald-500 shadow-lg shadow-emerald-500/20'
+              : 'bg-slate-700 border-2 border-slate-600'
           }`}>
-            <span className="text-3xl">{isTracking ? '📡' : '📴'}</span>
+            {isTracking ? (
+              <Signal className="w-10 h-10 text-emerald-400 animate-pulse" />
+            ) : (
+              <SignalOff className="w-10 h-10 text-slate-500" />
+            )}
           </div>
-          <p className="text-lg font-medium">
+          <p className="text-lg font-bold">
             {isTracking ? 'Tracking Active' : 'Tracking Off'}
           </p>
           {lastUpdate && (
-            <p className="text-sm text-gray-400 mt-1">Last update: {lastUpdate}</p>
+            <div className="flex items-center justify-center gap-1.5 mt-2">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <p className="text-xs text-slate-400">Last update: {lastUpdate}</p>
+            </div>
           )}
         </div>
 
         {/* Error */}
         {error && (
-          <div className="bg-red-900/50 border border-red-700 rounded-xl p-4 mb-6 text-red-200 text-sm">
-            {error}
+          <div className="bg-red-900/30 border border-red-800 rounded-xl p-4 mb-5">
+            <p className="text-sm text-red-300">{error}</p>
           </div>
         )}
 
-        {/* Controls */}
+        {/* Control button */}
         <button
           onClick={isTracking ? stopTracking : startTracking}
-          className={`w-full py-4 rounded-xl text-lg font-bold transition-colors ${
+          className={`w-full py-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
             isTracking
-              ? 'bg-red-600 hover:bg-red-700'
-              : 'bg-green-600 hover:bg-green-700'
+              ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/25'
+              : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25'
           }`}
           disabled={!selectedVehicle}
         >
-          {isTracking ? '⏹ Stop Tracking' : '▶ Start Tracking'}
+          {isTracking ? (
+            <>
+              <Square className="w-4 h-4" />
+              Stop Tracking
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4" />
+              Start Tracking
+            </>
+          )}
         </button>
 
-        <p className="text-center text-gray-500 text-xs mt-4">
-          Keep this page open while driving. GPS will update every few seconds.
+        <p className="text-center text-slate-500 text-[11px] mt-4">
+          Keep this page open while driving. GPS updates every few seconds.
         </p>
       </div>
     </div>

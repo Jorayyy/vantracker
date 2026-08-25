@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { MapPin, Truck, Search, Wifi, WifiOff, Clock } from 'lucide-react';
 
 interface Vehicle {
   id: string;
@@ -23,6 +24,14 @@ export default function LiveTrackingPage() {
   const markers = useRef<Map<string, maplibregl.Marker>>(new Map());
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [search, setSearch] = useState('');
+
+  const filteredVehicles = vehicles.filter(
+    (v) =>
+      v.plate_number.toLowerCase().includes(search.toLowerCase()) ||
+      v.name?.toLowerCase().includes(search.toLowerCase()) ||
+      v.driver_name?.toLowerCase().includes(search.toLowerCase())
+  );
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -30,7 +39,7 @@ export default function LiveTrackingPage() {
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-      center: [124.8, 10.75], // Leyte, Philippines
+      center: [124.8, 10.75],
       zoom: 11,
     });
 
@@ -47,44 +56,33 @@ export default function LiveTrackingPage() {
       setVehicles(data);
 
       data.forEach((vehicle) => {
-        if (!map.current) return;
+        if (!map.current || !vehicle.latitude || !vehicle.longitude) return;
 
         const existingMarker = markers.current.get(vehicle.id);
 
         if (existingMarker) {
-          // Animate to new position
           existingMarker.setLngLat([vehicle.longitude, vehicle.latitude]);
         } else {
-          // Create new marker
-          const statusColor = vehicle.status === 'online' ? '#22c55e' :
-                             vehicle.status === 'idle' ? '#eab308' : '#6b7280';
+          const statusColor = vehicle.status === 'online' ? '#10b981' :
+                             vehicle.status === 'idle' ? '#f59e0b' : '#64748b';
 
           const el = document.createElement('div');
-          el.className = 'vehicle-marker';
-          el.style.cssText = `
-            width: 32px;
-            height: 32px;
-            background: ${statusColor};
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
+          el.style.cssText = `width:36px;height:36px;cursor:pointer;position:relative;`;
+          el.innerHTML = `
+            <div style="width:36px;height:36px;background:${statusColor};border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            </div>
           `;
-          el.innerHTML = '🚐';
 
           const marker = new maplibregl.Marker({ element: el })
             .setLngLat([vehicle.longitude, vehicle.latitude])
             .setPopup(
-              new maplibregl.Popup({ offset: 25 }).setHTML(`
-                <div class="p-2">
-                  <p class="font-bold">${vehicle.plate_number}</p>
-                  <p class="text-sm text-gray-600">${vehicle.name || ''}</p>
-                  <p class="text-sm text-gray-600">${vehicle.driver_name || 'No driver'}</p>
-                  <p class="text-sm">Speed: ${vehicle.speed ? Math.round(vehicle.speed) : 0} km/h</p>
+              new maplibregl.Popup({ offset: 25, className: 'custom-popup' }).setHTML(`
+                <div style="padding:4px;font-family:system-ui;">
+                  <p style="font-weight:700;font-size:14px;color:#0f172a;">${vehicle.plate_number}</p>
+                  <p style="font-size:12px;color:#64748b;">${vehicle.name || ''}</p>
+                  <p style="font-size:12px;color:#64748b;">${vehicle.driver_name || 'No driver'}</p>
+                  <p style="font-size:12px;color:#64748b;margin-top:4px;">Speed: ${vehicle.speed ? Math.round(vehicle.speed) : 0} km/h</p>
                 </div>
               `)
             )
@@ -102,35 +100,55 @@ export default function LiveTrackingPage() {
     return () => eventSource.close();
   }, []);
 
+  const statusCounts = {
+    online: vehicles.filter((v) => v.status === 'online').length,
+    idle: vehicles.filter((v) => v.status === 'idle').length,
+    offline: vehicles.filter((v) => v.status === 'offline').length,
+  };
+
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 bg-white border-b">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">Live Tracking</h1>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-green-500 rounded-full"></span> Online
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-yellow-500 rounded-full"></span> Idle
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-gray-500 rounded-full"></span> Offline
-            </span>
-          </div>
+      {/* Header */}
+      <div className="px-6 py-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900">Live Tracking</h1>
+        </div>
+        <div className="flex items-center gap-5 text-xs font-medium">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+            Online ({statusCounts.online})
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
+            Idle ({statusCounts.idle})
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-slate-400 rounded-full"></span>
+            Offline ({statusCounts.offline})
+          </span>
         </div>
       </div>
 
       <div className="flex-1 relative">
         <div ref={mapContainer} className="absolute inset-0" />
 
-        {/* Vehicle list sidebar */}
-        <div className="absolute left-4 top-4 bottom-4 w-72 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-          <div className="p-3 border-b bg-gray-50">
-            <p className="font-semibold text-gray-900">Fleet ({vehicles.length})</p>
+        {/* Vehicle sidebar */}
+        <div className="absolute left-4 top-4 bottom-4 w-72 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col z-10">
+          <div className="p-3 border-b border-slate-100">
+            <div className="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
+              <Search className="w-4 h-4 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search vehicles..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-transparent text-sm outline-none w-full placeholder:text-slate-400"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2 px-1">{filteredVehicles.length} vehicles</p>
           </div>
           <div className="flex-1 overflow-auto">
-            {vehicles.map((vehicle) => (
+            {filteredVehicles.map((vehicle) => (
               <div
                 key={vehicle.id}
                 onClick={() => {
@@ -140,27 +158,33 @@ export default function LiveTrackingPage() {
                     zoom: 15,
                   });
                 }}
-                className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${
-                  selectedVehicle?.id === vehicle.id ? 'bg-blue-50' : ''
+                className={`px-4 py-3 cursor-pointer border-b border-slate-50 hover:bg-slate-50 transition-colors ${
+                  selectedVehicle?.id === vehicle.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className={`w-2 h-2 rounded-full ${
-                    vehicle.status === 'online' ? 'bg-green-500' :
-                    vehicle.status === 'idle' ? 'bg-yellow-500' : 'bg-gray-500'
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    vehicle.status === 'online' ? 'bg-emerald-500' :
+                    vehicle.status === 'idle' ? 'bg-amber-500' : 'bg-slate-400'
                   }`}></span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{vehicle.plate_number}</p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{vehicle.plate_number}</p>
+                    <p className="text-[11px] text-slate-500 truncate">
                       {vehicle.driver_name || 'No driver'}
                     </p>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-[11px] text-slate-400 font-medium shrink-0">
                     {vehicle.speed ? `${Math.round(vehicle.speed)} km/h` : '-'}
                   </span>
                 </div>
               </div>
             ))}
+            {filteredVehicles.length === 0 && (
+              <div className="p-8 text-center">
+                <Truck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs text-slate-500">No vehicles found</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

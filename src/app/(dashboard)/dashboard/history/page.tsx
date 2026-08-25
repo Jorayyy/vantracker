@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import sql from '@/lib/db';
+import { History, Route, Clock, Gauge } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,46 +22,51 @@ export default async function HistoryPage() {
   `;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Trip History</h1>
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Trip History</h1>
+        <p className="text-sm text-slate-500 mt-1">View past trips and route data</p>
+      </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehicle</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Distance</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Speed</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Vehicle</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Driver</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Started</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Duration</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Distance</th>
+              <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg Speed</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-slate-100">
             {trips.map((trip: any) => (
-              <tr key={trip.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium">{trip.plate_number}</td>
-                <td className="px-6 py-4 text-gray-600">{trip.driver_name || '-'}</td>
-                <td className="px-6 py-4 text-gray-600">
+              <tr key={trip.id} className="hover:bg-slate-50/50 transition-colors">
+                <td className="px-6 py-4 font-semibold text-sm text-slate-900">{trip.plate_number}</td>
+                <td className="px-6 py-4 text-sm text-slate-600">{trip.driver_name || '-'}</td>
+                <td className="px-6 py-4 text-sm text-slate-600">
                   {trip.started_at ? new Date(trip.started_at).toLocaleString() : '-'}
                 </td>
-                <td className="px-6 py-4 text-gray-600">
+                <td className="px-6 py-4 text-sm text-slate-600">
                   {trip.started_at && trip.ended_at
                     ? `${Math.round((new Date(trip.ended_at).getTime() - new Date(trip.started_at).getTime()) / 60000)} min`
                     : '-'}
                 </td>
-                <td className="px-6 py-4 text-gray-600">
+                <td className="px-6 py-4 text-sm text-slate-600">
                   {trip.distance_km ? `${trip.distance_km.toFixed(1)} km` : '-'}
                 </td>
-                <td className="px-6 py-4 text-gray-600">
+                <td className="px-6 py-4 text-sm text-slate-600">
                   {trip.avg_speed ? `${Math.round(trip.avg_speed)} km/h` : '-'}
                 </td>
               </tr>
             ))}
             {trips.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                  No trip history yet. Trips will appear here once drivers start tracking.
+                <td colSpan={6} className="px-6 py-16 text-center">
+                  <Route className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-slate-500">No trip history yet</p>
+                  <p className="text-xs text-slate-400 mt-1">Trips will appear here once drivers start tracking</p>
                 </td>
               </tr>
             )}
