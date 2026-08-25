@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const [vehicleCount, driverCount, locationCount] = await Promise.all([
     sql`SELECT COUNT(*)::int as count FROM vehicles WHERE company_id = ${companyId}`,
     sql`SELECT COUNT(*)::int as count FROM users WHERE company_id = ${companyId} AND role = 'driver'`,
-    sql`SELECT COUNT(*)::int as count FROM vehicle_locations WHERE created_at > now() - INTERVAL '24 hours'`,
+    sql`SELECT COUNT(*)::int as count FROM vehicle_locations vl JOIN vehicles v ON v.id = vl.vehicle_id WHERE v.company_id = ${companyId} AND vl.created_at > now() - INTERVAL '24 hours'`,
   ]);
 
   const stats = [

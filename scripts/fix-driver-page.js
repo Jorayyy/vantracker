@@ -1,4 +1,9 @@
-'use client';
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, '..', 'src', 'app', '(dashboard)', 'dashboard', 'driver', 'page.tsx');
+
+const content = `'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
@@ -293,3 +298,7 @@ export default function DriverPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync(filePath, content, 'utf8');
+console.log('Driver page rewritten with static Tailwind classes + ref fix');

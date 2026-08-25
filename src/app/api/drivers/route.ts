@@ -6,11 +6,16 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if ((session.user as any).role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  const companyId = (session.user as any).companyId;
   const body = await request.json();
-  const { full_name, email, phone, password, company_id } = body;
+  const { full_name, email, phone, password } = body;
 
-  // Check if email already exists
+  if (!full_name || !email || !password) {
+    return NextResponse.json({ error: 'full_name, email, and password are required' }, { status: 400 });
+  }
+
   const existing = await sql`SELECT id FROM users WHERE email = ${email}`;
   if (existing.length > 0) {
     return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
@@ -18,13 +23,17 @@ export async function POST(request: Request) {
 
   const password_hash = await bcrypt.hash(password, 10);
 
-  const result = await sql`
-    INSERT INTO users (company_id, email, password_hash, full_name, phone, role)
-    VALUES (${company_id}, ${email}, ${password_hash}, ${full_name}, ${phone || null}, 'driver')
-    RETURNING id, email, full_name, phone, role, created_at
-  `;
-
-  return NextResponse.json(result[0]);
+  try {
+    const result = await sql`
+      INSERT INTO users (company_id, email, password_hash, full_name, phone, role)
+      VALUES (${companyId}, ${email}, ${password_hash}, ${full_name}, ${phone || null}, 'driver')
+      RETURNING id, email, full_name, phone, role, created_at
+    `;
+    return NextResponse.json(result[0], { status: 201 });
+  } catch (error) {
+    console.error('Driver create error:', error);
+    return NextResponse.json({ error: 'Failed to create driver' }, { status: 500 });
+  }
 }
 
 export async function GET() {

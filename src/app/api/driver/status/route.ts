@@ -15,19 +15,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
 
-  const existing = await sql`SELECT id FROM driver_statuses WHERE driver_id = ${userId}`;
-
-  if (existing.length > 0) {
-    await sql`
-      UPDATE driver_statuses SET status = ${status}, status_message = ${status_message || null}, created_at = NOW()
-      WHERE driver_id = ${userId}
-    `;
-  } else {
-    await sql`
-      INSERT INTO driver_statuses (driver_id, status, status_message)
-      VALUES (${userId}, ${status}, ${status_message || null})
-    `;
-  }
+  await sql`
+    INSERT INTO driver_statuses (driver_id, status, status_message)
+    VALUES (${userId}, ${status}, ${status_message || null})
+    ON CONFLICT (driver_id) DO UPDATE SET status = ${status}, status_message = ${status_message || null}, created_at = NOW()
+  `;
 
   return NextResponse.json({ success: true, status });
 }

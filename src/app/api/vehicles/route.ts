@@ -5,17 +5,27 @@ import sql from '@/lib/db';
 export async function POST(request: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if ((session.user as any).role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  const companyId = (session.user as any).companyId;
   const body = await request.json();
-  const { plate_number, name, model, color, company_id } = body;
+  const { plate_number, name, model, color } = body;
 
-  const result = await sql`
-    INSERT INTO vehicles (company_id, plate_number, name, model, color)
-    VALUES (${company_id}, ${plate_number}, ${name || null}, ${model || null}, ${color || null})
-    RETURNING *
-  `;
+  if (!plate_number || !plate_number.trim()) {
+    return NextResponse.json({ error: 'Plate number required' }, { status: 400 });
+  }
 
-  return NextResponse.json(result[0]);
+  try {
+    const result = await sql`
+      INSERT INTO vehicles (company_id, plate_number, name, model, color)
+      VALUES (${companyId}, ${plate_number.trim()}, ${name || null}, ${model || null}, ${color || null})
+      RETURNING *
+    `;
+    return NextResponse.json(result[0], { status: 201 });
+  } catch (error) {
+    console.error('Vehicle create error:', error);
+    return NextResponse.json({ error: 'Failed to create vehicle' }, { status: 500 });
+  }
 }
 
 export async function GET() {

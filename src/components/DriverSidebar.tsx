@@ -13,7 +13,7 @@ export default function DriverSidebar({ user }: { user: any }) {
     <aside className="w-0 lg:w-64 bg-slate-900 text-white flex flex-col">
       <div className="h-16 flex items-center px-4 border-b border-slate-700/50 gap-2.5">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Truck className="w-4.5 h-4.5 text-white" />
+          <Truck className="w-[18px] h-[18px] text-white" />
         </div>
         <span className="font-semibold text-[15px] tracking-tight">VanTracker</span>
       </div>

@@ -44,14 +44,14 @@ export default function Sidebar({ user }: { user: any }) {
         {!collapsed && (
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Truck className="w-4.5 h-4.5 text-white" />
+              <Truck className="w-[18px] h-[18px] text-white" />
             </div>
             <span className="font-semibold text-[15px] tracking-tight">VanTracker</span>
           </div>
         )}
         {collapsed && (
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mx-auto">
-            <Truck className="w-4.5 h-4.5 text-white" />
+            <Truck className="w-[18px] h-[18px] text-white" />
           </div>
         )}
         <button
