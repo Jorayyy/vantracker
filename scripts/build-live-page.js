@@ -1,4 +1,9 @@
-'use client';
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, '..', 'src', 'app', '(dashboard)', 'dashboard', 'live', 'page.tsx');
+
+const content = `'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
@@ -62,7 +67,7 @@ export default function LiveTrackingPage() {
                 'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
               ],
               tileSize: 256,
-              attribution: '\u00a3 CARTO \u00a3 OpenStreetMap contributors',
+              attribution: '\\u00a3 CARTO \\u00a3 OpenStreetMap contributors',
             },
           },
           layers: [{ id: 'carto-light', type: 'raster', source: 'carto-light' }],
@@ -302,3 +307,7 @@ export default function LiveTrackingPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync(filePath, content, 'utf8');
+console.log('Live page written');

@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Route,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/dashboard/live', label: 'Live Tracking', icon: MapPin },
   { href: '/dashboard/vehicles', label: 'Vehicles', icon: Truck },
   { href: '/dashboard/drivers', label: 'Drivers', icon: Users },
+  { href: '/dashboard/routes', label: 'Routes', icon: Route },
   { href: '/dashboard/history', label: 'Trip History', icon: History },
   { href: '/dashboard/geofences', label: 'Geofences', icon: Map },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },

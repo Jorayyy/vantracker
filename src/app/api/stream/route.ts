@@ -54,6 +54,7 @@ async function sendPositions(
         l.speed,
         l.heading,
         l.recorded_at,
+        l.driver_status,
         u.full_name as driver_name,
         CASE
           WHEN l.recorded_at > now() - INTERVAL '2 minutes' THEN 'online'
