@@ -258,6 +258,7 @@ export default function LiveTrackingPage() {
           existingMarker.setLngLat([vehicle.longitude, vehicle.latitude]);
         } else {
           const statusColor =
+            vehicle.status === 'offline' ? '#64748b' :
             vehicle.driver_status === 'idle' ? '#f59e0b' :
             vehicle.driver_status === 'on_break' ? '#3b82f6' :
             vehicle.driver_status === 'repair' ? '#ef4444' :
@@ -326,10 +327,10 @@ export default function LiveTrackingPage() {
   }, []);
 
   const statusCounts = {
-    driving: vehicles.filter((v) => v.driver_status === 'online' || (!v.driver_status && v.status === 'online')).length,
-    idle: vehicles.filter((v) => v.driver_status === 'idle' || v.status === 'idle').length,
-    on_break: vehicles.filter((v) => v.driver_status === 'on_break').length,
-    repair: vehicles.filter((v) => v.driver_status === 'repair').length,
+    driving: vehicles.filter((v) => v.status !== 'offline' && (v.driver_status === 'online' || (!v.driver_status && v.status === 'online'))).length,
+    idle: vehicles.filter((v) => v.status !== 'offline' && (v.driver_status === 'idle' || v.status === 'idle')).length,
+    on_break: vehicles.filter((v) => v.status !== 'offline' && v.driver_status === 'on_break').length,
+    repair: vehicles.filter((v) => v.status !== 'offline' && v.driver_status === 'repair').length,
     offline: vehicles.filter((v) => v.status === 'offline').length,
   };
 
@@ -397,7 +398,8 @@ export default function LiveTrackingPage() {
                 <div className="flex items-center gap-3">
                   <span className={
                     'w-2.5 h-2.5 rounded-full shrink-0 ' +
-                    (vehicle.driver_status === 'repair' ? 'bg-red-500' :
+                    (vehicle.status === 'offline' ? 'bg-slate-400' :
+                     vehicle.driver_status === 'repair' ? 'bg-red-500' :
                      vehicle.driver_status === 'on_break' ? 'bg-blue-500' :
                      vehicle.driver_status === 'idle' ? 'bg-amber-500' :
                      vehicle.status === 'online' ? 'bg-emerald-500' :
