@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function GeofencesPage() {
   const session = await auth();
   if (!session) redirect('/login');
+  if ((session.user as any).role === 'driver') redirect('/dashboard/driver');
 
   const companyId = (session.user as any).companyId;
 

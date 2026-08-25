@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import DriverSidebar from '@/components/DriverSidebar';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,19 @@ export default async function DashboardLayout({
 
   if (!session) {
     redirect('/login');
+  }
+
+  const role = (session.user as any).role;
+
+  if (role === 'driver') {
+    return (
+      <div className="flex h-screen bg-gray-100">
+        <DriverSidebar user={session.user} />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
+    );
   }
 
   return (
